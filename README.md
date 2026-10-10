@@ -641,7 +641,7 @@ perturbación: `robustez_*_ejemplos.jpg`.
 1. **Oclusión: es la perturbación más dañina.** En el sintético, A tolera hasta el 30% del índice tapado (F1 0,95) y
    cae a 0,52 con el 50%. En las fotos reales A base ya pierde con el 10% (F1 0,62), porque esas mesas ya
    tienen muchas cartas tapadas. A_propio aguanta el 10–20% (F1 0,93 / 0,89). Con el 50% o más,
-   ningún modelo reconoce el índice. Eso motivó, en la aplicación, contar como carta una esquina suelta (la otra puede
+   en las fotos reales ningún modelo supera un F1 de 0,16. Eso motivó, en la aplicación, contar como carta una esquina suelta (la otra puede
    estar tapada), la memoria del seguimiento y congelar la mesa mientras hay una mano encima.
 2. **Iluminación: en datos reales importa mucho más que en los sintéticos.** En el sintético los modelos son casi
    inmunes (F1 ≥ 0,98), porque Roboflow ya aplicó cambios de brillo al exportar ese dataset. En las fotos reales, la
