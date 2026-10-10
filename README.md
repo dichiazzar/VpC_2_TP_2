@@ -70,10 +70,11 @@ mano del Jugador ─► MediaPipe (21 puntos) ─► pose ─► gesto ───
 │   ├── robustez.py              rotación, oclusión e iluminación (alcance acordado con el profesor)
 │   ├── robustez_fondo.py        fondo: escenas compuestas con cartas reales del mazo de la demo
 │   ├── confusiones.py           qué valores se confunden y qué esquinas no se encuentran
+│   ├── video_demo.py            video demo de la presentación (dos partidas reales con leyendas)
 │   ├── partidas_reales/         videos crudos de partidas reales + registro.yaml con el resultado esperado
 │   ├── clases.py                normaliza nombres de clase de otros datasets ('10h', 'AS'...) a valores
 │   └── resultados/              CSV con las métricas
-├── videos/                      videos de prueba generados (se regeneran con generar_video_prueba.py)
+├── videos/                      demo.mp4 (video de la presentación); el resto se regenera con los scripts
 ├── tests/                       tests unitarios (reglas y gestos): python -m pytest tests
 ├── Fotos_prueba/                4 fotos de prueba del mazo propio (Bicycle Dragon)
 ├── COMO_JUGAR.md                guía para jugar una partida
@@ -722,6 +723,7 @@ python Experimentos/robustez.py --dataset sintetico --n 100
 python Experimentos/robustez.py --dataset propio --iou 0.3 --familias Rotación
 python Experimentos/robustez_fondo.py                      # fondo con escenas compuestas (~6 min)
 python Experimentos/confusiones.py --dataset propio
+python Experimentos/video_demo.py                          # video demo -> videos/demo.mp4 (~5 min)
 python -m pytest tests
 ```
 
