@@ -1,8 +1,5 @@
 import math
 
-# ============================================================
-# GEOMETRÍA DE UNA CARTA (calibrada con las fotos de prueba)
-# ============================================================
 # Las dos esquinas con índice de una misma carta están en vértices opuestos (diagonal).
 # En lugar de umbrales en píxeles (que dependen de la resolución y de la altura de la cámara)
 # se usan medidas RELATIVAS al tamaño de la esquina detectada:

@@ -49,10 +49,6 @@ DATASETS = {"propio": (REPO / "Dataset Real" / "roboflow", "test"),
             "sintetico": (REPO / "YOLO - 13" / "Dataset YOLO 13", "test")}
 
 
-# ============================================================
-# PERTURBACIONES (gts = [(valor, x1, y1, x2, y2), ...])
-# ============================================================
-
 def a_cajas(gts):
     return np.array([g[1:] for g in gts], np.float32).reshape(-1, 4)
 
