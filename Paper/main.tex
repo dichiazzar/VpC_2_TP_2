@@ -64,14 +64,6 @@ sintéticos, un dataset real público y un dataset real propio.
 \item Un sistema completo y reproducible validado con partidas reales.
 \end{itemize}
 
-\noindent Reproducibilidad:
-El código fuente, los modelos entrenados, los conjuntos
-de datos y los videos de las partidas reales están
-disponibles en
-\url{https://github.com/dichiazzar/VpC_2_TP_2}.
-
-\vspace{4mm}
-
 % =====================================================================================================================
 \section{Metodología}
 
@@ -83,11 +75,9 @@ de reglas y la interfaz (bloques 06--12).}
 \label{fig:arquitectura}
 \end{figure*}
 
-La Fig.~\ref{fig:arquitectura} muestra la arquitectura general del sistema propuesto. El desarrollo se divide en dos etapas principales. La primera corresponde al entrenamiento y evaluación de modelos para la detección y reconocimiento del índice de las cartas. La segunda etapa corresponde a la operación en tiempo real, donde el modelo seleccionado se integra con módulos de captura de video, reconocimiento de gestos, lógica de Blackjack e interfaz de usuario.
+La Fig.~\ref{fig:arquitectura} resume la arquitectura del sistema.
 
 \subsection{Datos}
-
-Se utilizaron tres conjuntos de datos: uno sintético, un conjunto real público y un conjunto real propio. En todos los casos se mantuvieron particiones independientes de entrenamiento, validación y prueba.
 
 \textbf{Sintético.} Se utilizaron 10.100 imágenes de 512$\times$512 píxeles derivadas del dataset \emph{Playing Cards} de Roboflow \cite{roboflowcards}, compuesto por cartas generadas sobre distintos fondos texturados. El conjunto se dividió en 7.070 imágenes de entrenamiento, 2.020 de validación y 1.010 de prueba. Las etiquetas originales se redujeron a los 13 clases de cartas para la arquitectura A y a una única clase, correspondiente al índice de la esquina, para el detector de la arquitectura B. Para entrenar la CNN de B, se recortaron las regiones anotadas añadiendo un margen del 10\%, obteniéndose 28.280 / 8.080 / 4.040 recortes para entrenamiento, validación y prueba, respectivamente.
 
@@ -95,9 +85,7 @@ Se utilizaron tres conjuntos de datos: uno sintético, un conjunto real público
 
 \textbf{Real propio.} Para representar las condiciones de despliegue del prototipo se grabaron distintas sesiones utilizando la cámara empleada durante el juego. De estas grabaciones se extrajeron 130 cuadros, divididos en 79 / 21 / 30 para entrenamiento, validación y prueba. Las imágenes fueron pre-etiquetadas utilizando la arquitectura A y posteriormente corregidas de forma manual, obteniéndose un total de 1.688 esquinas anotadas. El conjunto incluye situaciones con múltiples cartas superpuestas y condiciones propias del escenario real de uso. La separación entre entrenamiento, validación y prueba se realizó por sesión, evitando que cuadros consecutivos o visualmente muy similares aparecieran en particiones diferentes y reduciendo así el riesgo de \emph{data leakage}.
 \subsection{Modelos}
-El modelo de detección final utilizado surgió de la comparación entre dos estrategia:
-
-\textbf{A (una etapa):} se utilizó YOLO11s \cite{ultralytics2024,khanam2024}, inicializado con pesos preentrenados sobre COCO y adaptado para detectar y clasificar directamente los índices de las cartas en 13 clases. El modelo fue entrenado durante 50 épocas con imágenes de entrada de 640$\times$640 píxeles. Se seleccionó YOLO11s por ofrecer un compromiso adecuado entre capacidad de detección y costo computacional, además de su integración con herramientas de seguimiento utilizadas posteriormente en el procesamiento de video.
+\textbf{A (una etapa):} se utilizó YOLO11s \cite{ultralytics2024,khanam2024}, inicializado con pesos preentrenados sobre COCO y adaptado para detectar y clasificar directamente los índices de las cartas en 13 clases. Se seleccionó YOLO11s por ofrecer un compromiso adecuado entre capacidad de detección y costo computacional, además de su integración con herramientas de seguimiento utilizadas posteriormente en el procesamiento de video.
 
 
 \textbf{B (dos etapas):} de manera análoga, se entrenó YOLO11s para la detección de una única clase, correspondiente a los índices localizados en las esquinas de las cartas. Cada región detectada es recortada y enviada a una ResNet-18 \cite{he2016}, inicializada con pesos preentrenados sobre ImageNet y adaptada para clasificar los recortes entre los 13 rangos posibles. Las imágenes de entrada al clasificador se redimensionan a \(96 \times 96\) píxeles. 
@@ -106,22 +94,14 @@ La hipótesis que impulsó el desarrollo de ambas arquitecturas fue la idea de q
 
 \subsection{Entrenamiento}
 
-Los modelos de ambas arquitecturas se entrenaron utilizando las mismas particiones de entrenamiento, validación y prueba del dataset sintético, con el objetivo de mantener una comparación consistente. El conjunto de prueba se reservó exclusivamente para la evaluación final de los modelos.
+\textbf{Detectores YOLO.} Ambos detectores parten de YOLO11s preentrenado en COCO y se entrenan hasta 50 épocas con imágenes de $640\times640$ píxeles, lote de 16 y \textit{early stopping} con paciencia de 15 épocas.
 
-\textbf{Detectores YOLO.} Tanto el detector de 13 clases de la arquitectura A como el detector de una única clase de la arquitectura B se inicializaron a partir de pesos preentrenados de YOLO11s. Ambos modelos se entrenaron durante un máximo de 50 épocas, con imágenes de entrada de $640\times640$ píxeles y un tamaño de lote de 16. Se utilizó la selección automática del optimizador provista por Ultralytics y \textit{early stopping} con una paciencia de 15 épocas. Durante el entrenamiento se almacenó el \textit{checkpoint} correspondiente al mejor modelo para su posterior evaluación.
-
-\textbf{Clasificador ResNet-18.} Para la segunda etapa de la arquitectura B se utilizó una ResNet-18 inicializada con pesos preentrenados sobre ImageNet. La última fully connected se reemplazó por una capa de 13 salidas y se ajustaron todos los parámetros de la red sobre los recortes de los índices. El entrenamiento se realizó con lotes de 128 imágenes durante un máximo de 12 épocas.
-
-Como función de pérdida se utilizó Cross-Entropy con \textit{label smoothing} de 0,05. La optimización se realizó mediante AdamW, con una tasa de aprendizaje máxima de $10^{-3}$, \textit{weight decay} de $10^{-4}$ y un planificador OneCycleLR. El mejor modelo se seleccionó según la exactitud sobre el conjunto de validación y se aplicó \textit{early stopping} después de cuatro épocas consecutivas sin mejora.
-
-Durante el entrenamiento del clasificador se aplicaron aumentos de datos consistentes en pequeñas transformaciones afines (rotación de hasta $15^\circ$, traslación y cambios de escala), modificaciones de brillo, contraste, saturación y tono, y desenfoque gaussiano aleatorio. No se utilizaron volteos, ya que una imagen espejada del índice de una carta no representa una configuración válida. Para validación y prueba únicamente se realizó el redimensionamiento y la normalización correspondiente a ImageNet.
+\textbf{Clasificador ResNet-18.} Se reemplaza la última capa por una de 13 salidas y se ajusta toda la red (lote de 128, hasta 12 épocas) con AdamW y OneCycleLR (tasa máxima $10^{-3}$, \textit{weight decay} $10^{-4}$), \textit{label smoothing} de 0,05 y aumentos de rotación ($\pm 15^\circ$), traslación, escala, color y desenfoque. No se usan volteos, porque un índice espejado no es una carta válida. En todos los casos el mejor modelo se elige con la validación y el test se reserva para la evaluación final.
 
 
 \textbf{\textit{Fine-tuning} utilizando imágenes reales:} partiendo de los modelos entrenados sobre el dataset sintético, se realizó una segunda etapa de entrenamiento incorporando imágenes reales. Se llevaron a cabo dos experimentos independientes: uno utilizando el dataset real público (\emph{ft}) y otro utilizando el dataset real propio (\emph{propio}). En cada época, las imágenes reales de entrenamiento se combinaron con una muestra de 400 imágenes del dataset sintético, repitiendo cinco veces las imágenes reales para aumentar su representación durante el ajuste. La selección del mejor modelo se realizó utilizando exclusivamente el conjunto de validación real correspondiente, manteniendo el conjunto de test real reservado para la evaluación final.
 
 \subsection{De esquinas a cartas y a la partida}
-La integración del sistema en video en vivo introdujo varios desafíos adicionales. Entre ellos se encuentran la asignación precisa de las cartas a cada jugador, el seguimiento temporal de las cartas ante posibles oclusiones y movimientos, y la identificación robusta de los gestos utilizados durante la partida.
-
 \textbf{Emparejamiento.} Cada carta suele generar dos detecciones, correspondientes a dos de sus esquinas opuestas. Para determinar cuáles pertenecen a una misma carta, se comparan la distancia entre sus centroides y la orientación de la diagonal que los une. Dos esquinas se consideran compatibles cuando la distancia entre sus centros, normalizada por el lado mayor de las cajas detectadas, se encuentra entre $3{,}3$ y $4{,}8$, y la línea que las une presenta un ángulo próximo a $50^\circ$ para cartas verticales o a $140^\circ$ para cartas giradas. La utilización del lado mayor como referencia permite mantener una medida consistente ante cambios en la orientación de los índices. Estos umbrales se calibraron empíricamente a partir de las esquinas etiquetadas en el dataset propio.
 
 Entre los pares compatibles se priorizan aquellos con mejor ajuste geométrico, evitando asignar una misma esquina a más de una carta. Si una esquina no puede emparejarse, se conserva igualmente como una carta individual, asumiendo que su esquina opuesta puede encontrarse ocluida. Finalmente, se eliminan detecciones redundantes. Por ejemplo, si el modelo detecta más de una vez una misma esquina, se conserva únicamente una de las detecciones. Asimismo, una detección adicional situada dentro de una carta ya reconstruida se descarta cuando su geometría no resulta compatible con la existencia de una carta diferente.
@@ -138,7 +118,7 @@ Una detección se considera correctamente localizada cuando presenta una interse
 
 \begin{figure*}[!t]
     \centering
-    \includegraphics[width=0.86\textwidth]{figuras/perturbaciones.jpg}
+    \includegraphics[width=0.6\textwidth]{figuras/perturbaciones.jpg}
     \caption{Ejemplos de las cinco familias de perturbaciones utilizadas para evaluar robustez: rotación, oclusión, brillo, contraste y sombra. Las cajas verdes indican las esquinas anotadas. Cada familia se evalúa en distintos niveles de severidad; en las sombras, el valor indicado corresponde al nivel mínimo de iluminación.}
     \label{fig:perturbaciones}
 \end{figure*}
@@ -151,8 +131,6 @@ Para garantizar una comparación controlada, todos los modelos reciben exactamen
 
 \textbf{Análisis de errores.} Para caracterizar los errores de detección y clasificación, cada esquina real se asocia con la predicción que presenta la mayor superposición espacial, siempre que su IoU sea mayor o igual a $0{,}5$, independientemente del rango predicho. Esto permite distinguir entre errores de clasificación (la esquina se localiza correctamente pero se asigna un rango incorrecto), falsos negativos (la esquina no es detectada) y falsos positivos (detecciones que no pueden asociarse con ninguna esquina real).
 
-\vspace{4mm}
-
 
 
 % =====================================================================================================================
@@ -160,7 +138,7 @@ Para garantizar una comparación controlada, todos los modelos reciben exactamen
 
 \subsection{Brecha sintético--real y \textit{fine-tuning}}
 
-\begin{table}[!h]
+\begin{table}[t]
 \centering
 \caption{Comparación de las arquitecturas A y B en los dominios sintético y reales, antes y después del \textit{fine-tuning}. \emph{ft}: ajuste con el dataset real público; \emph{propio}: ajuste con el dataset propio.}
 \label{tab:dominios}
@@ -204,7 +182,7 @@ cortado: ajustados con fotos propias). Las rotaciones se miden con IoU $\geq$ 0,
 \label{fig:robustez}
 \end{figure*}
 
-\begin{table}[!h]
+\begin{table}[t]
 \centering
 \caption{F1 medio de cada arquitectura ante las distintas familias de perturbaciones. Cada valor corresponde al promedio sobre los niveles de severidad evaluados. La categoría iluminación agrupa las perturbaciones de brillo, contraste y sombra.}
 \label{tab:robustez}
@@ -224,7 +202,7 @@ Dominio & Familia & A & B & A \emph{propio} & B \emph{propio} \\
 \end{tabular}
 \end{table}
 
-\begin{table}[!h]
+\begin{table}[t]
 \centering
 \caption{F1 sobre escenas compuestas manteniendo las mismas siete cartas y posiciones y variando únicamente el fondo.}
 \label{tab:fondo}
@@ -241,11 +219,11 @@ B \emph{propio} & 1,00 & 1,00 & 1,00 & 1,00 & 1,00 & 1,00 & 0,99 & 1,00 \\
 \end{tabular}
 \end{table}
 
-La Tabla~\ref{tab:robustez} resume el efecto de las distintas familias de perturbaciones, mientras que la Fig.~\ref{fig:robustez} muestra la evolución del F1 al aumentar su severidad. En conjunto, los experimentos muestran tres comportamientos principales: la oclusión constituye la perturbación más crítica, las alteraciones de iluminación afectan considerablemente más al dominio real que al sintético y las variaciones de fondo tienen un efecto reducido.
+La Tabla~\ref{tab:robustez} resume cada familia y la Fig.~\ref{fig:robustez} muestra la evolución del F1 con la severidad.
 
 \textbf{Oclusión.} La oclusión produce la mayor degradación entre las perturbaciones evaluadas. En el dominio sintético, A mantiene un F1 de 0,95 con un 30\% del índice ocluido y desciende a 0,52 al alcanzar el 50\%. La degradación aparece considerablemente antes en imágenes reales: A base cae de 0,78 a 0,62 con apenas un 10\% de oclusión y a 0,36 con un 30\%. El \textit{fine-tuning} con imágenes propias aumenta notablemente esta tolerancia, alcanzando F1 de 0,93 y 0,89 para oclusiones del 10\% y 20\%, respectivamente. Este resultado motivó decisiones posteriores del sistema, como conservar esquinas no emparejadas como cartas válidas y mantener temporalmente detecciones perdidas mediante el módulo de seguimiento.
 
-\textbf{Iluminación.} Se observa una diferencia marcada entre los dominios sintético y real. Sobre imágenes sintéticas, las perturbaciones de iluminación apenas modifican el desempeño medio, que permanece por encima de 0,98. En cambio, las imágenes reales presentan una sensibilidad considerable a condiciones extremas de subexposición y bajo contraste. Con brillo reducido a $\times0,2$, A base alcanza F1 de 0,40 y B deja de producir detecciones correctas; con contraste $\times0,15$, A base desciende a 0,24. El ajuste con imágenes propias mejora especialmente a A, cuyo F1 medio frente a perturbaciones de iluminación aumenta de 0,69 a 0,88. Esto sugiere que parte de la brecha sintético/real observada anteriormente está asociada a la representación de las condiciones de iluminación del escenario objetivo.
+\textbf{Iluminación.} Se observa una diferencia marcada entre los dominios sintético y real. Sobre imágenes sintéticas, las perturbaciones de iluminación apenas modifican el desempeño medio, que permanece por encima de 0,98. En cambio, las imágenes reales presentan una sensibilidad considerable a condiciones extremas de subexposición y bajo contraste. Con brillo reducido a $\times0,2$, A base alcanza F1 de 0,40 y B deja de producir detecciones correctas; con contraste $\times0,15$, A base desciende a 0,24. El ajuste con imágenes propias mejora especialmente a A, cuyo F1 medio frente a perturbaciones de iluminación aumenta de 0,69 a 0,88. Parte de la brecha sintético/real se debe, entonces, a la iluminación del escenario.
 
 \textbf{Rotación.} La evaluación de rotaciones requiere considerar el efecto de la métrica de localización. Al utilizar IoU $\geq 0,5$, se observa una caída pronunciada a $45^\circ$ incluso sobre imágenes sintéticas. Sin embargo, parte de esta disminución se debe a que las cajas anotadas y predichas permanecen alineadas con los ejes, por lo que la caja envolvente de un índice rotado aumenta de tamaño y reduce artificialmente su IoU. Al relajar únicamente para este análisis el umbral a IoU $\geq 0,3$, A alcanza F1 de 0,98 a $45^\circ$ y valores próximos a 1,00 para rotaciones mayores en el dominio sintético. En el dominio real persiste una degradación moderada, lo que indica que no todo el efecto puede atribuirse a la métrica. Una posible explicación adicional es que las imágenes del dataset propio fueron capturadas manteniendo una única orientación de la cámara, por lo que las orientaciones rotadas se encuentran menos representadas durante el ajuste del modelo.
 
@@ -253,7 +231,7 @@ La Tabla~\ref{tab:robustez} resume el efecto de las distintas familias de pertur
 
 \subsection{Análisis de errores}
 
-\begin{table}[!h]
+\begin{table}[t]
 \centering
 \caption{Errores por esquina en el test propio (412 esquinas reales).}
 \label{tab:errores}
@@ -275,30 +253,24 @@ La Tabla~\ref{tab:errores} permite identificar el origen de los errores observad
 
 El \textit{fine-tuning} con imágenes propias modifica sustancialmente este comportamiento. En A \emph{propio}, las esquinas no detectadas disminuyen del 32,0\% al 4,4\% y no se observan errores de clasificación, aunque aumenta el número de falsos positivos de 5 a 17. B presenta una tendencia similar, reduciendo las esquinas no detectadas al 4,9\%, pero conserva un 2,2\% de errores de clasificación y genera 24 falsos positivos.
 
-Estos resultados refuerzan lo observado en los experimentos de robustez: el principal desafío del sistema se encuentra en la localización de los índices bajo condiciones reales, más que en distinguir su rango una vez localizados. En particular, para A \emph{propio}, el rango 8 concentra 13 de las 18 esquinas no detectadas. Un comportamiento similar se observa en B \emph{propio}, donde 11 de las 20 esquinas no detectadas corresponden también al rango 8. Esto sugiere que una parte importante del error residual se encuentra concentrada en casos específicos y no distribuida uniformemente entre las clases.
+El error residual se concentra en el rango 8: 13 de las 18 esquinas que A \emph{propio} no detecta, y 11 de las 20 de B \emph{propio}.
 
 \subsection{Sistema completo}
 
-\begin{figure}[!h]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figuras/aplicacion.jpg}
 \caption{Ejemplo de una partida real procesada por el sistema. Izquierda: el gesto de \emph{apuntar} solicita una nueva carta. Derecha: estado final de la partida, con las cartas detectadas, los puntajes y los eventos registrados por la aplicación.}
 \label{fig:aplicacion}
 \end{figure}
 
-Se evaluó el comportamiento del sistema una vez integrados sus distintos componentes. En particular, se analizó cuantitativamente la estabilidad del seguimiento temporal y la robustez del reconocimiento de gestos, y se realizó una validación funcional del prototipo completo mediante partidas reales de Blackjack.
-
 \textbf{Seguimiento.} Para evaluar el aporte del seguimiento temporal se utilizaron videos con movimiento de cámara simulado. La incorporación del módulo de seguimiento aumentó la proporción de cuadros en los que se mostró correctamente la mano del 50,5\% al 76,2\%. Además, en intervalos de 10~s, la cantidad de cambios en la mano mostrada se redujo de 47 a 4. Estos resultados muestran que la combinación del seguimiento de las esquinas, la memoria temporal y la estabilización de la mano reduce considerablemente las fluctuaciones producidas por pérdidas momentáneas de detecciones.
 
-\textbf{Gestos.} El reconocimiento de gestos se evaluó sobre imágenes reales de HaGRID \cite{kapitanov2024hagrid}. La estrategia propuesta alcanza un \emph{recall} de 0,80 para el gesto de \emph{apuntar} y de 0,89 para \emph{palma}, manteniendo valores similares al rotar las imágenes $90^\circ$ y $180^\circ$. Como referencia, el reconocedor de gestos preentrenado de MediaPipe utilizado como comparación deja de reconocer correctamente ambos gestos al rotar las imágenes $90^\circ$ o $180^\circ$, alcanzando un \emph{recall} de 0 en estas orientaciones. Esta diferencia resulta especialmente relevante para una cámara cenital, donde la orientación de la mano respecto de la imagen puede variar considerablemente, y muestra la ventaja de utilizar relaciones geométricas entre los \emph{landmarks} con menor dependencia respecto de la orientación. En clips de video, el gesto de \emph{palma} se reconoce correctamente en el 82--87\% de los casos, con un 4,2\% de activaciones falsas.
-\textbf{Partidas reales.} Finalmente, se realizó una validación integral del prototipo mediante partidas completas de Blackjack grabadas en el escenario de la aplicación. Los casos evaluados incluyeron distintas situaciones del juego, entre ellas victorias del jugador y de la Casa, el ajuste dinámico del valor del As de 11 a 1 y la presencia de cartas giradas. Al reproducir posteriormente las partidas cuadro a cuadro, el sistema reprodujo correctamente los resultados finales, las cartas detectadas y los gestos registrados durante la ejecución en vivo (Fig.~\ref{fig:aplicacion}).
-
-Estos videos se conservaron además como casos de prueba de regresión para verificar el comportamiento integral del sistema ante futuras modificaciones. Durante su ejecución, el prototipo operó a una velocidad de 7--10 cuadros por segundo en CPU, permitiendo la detección de cartas, el seguimiento temporal, el reconocimiento de gestos y la actualización de la lógica del juego en tiempo real.
+\textbf{Gestos.} El reconocimiento de gestos se evaluó sobre imágenes reales de HaGRID \cite{kapitanov2024hagrid}. La estrategia propuesta alcanza un \emph{recall} de 0,80 para el gesto de \emph{apuntar} y de 0,89 para \emph{palma}, manteniendo valores similares al rotar las imágenes $90^\circ$ y $180^\circ$. Como referencia, el reconocedor de gestos preentrenado de MediaPipe utilizado como comparación deja de reconocer correctamente ambos gestos al rotar las imágenes $90^\circ$ o $180^\circ$, alcanzando un \emph{recall} de 0 en estas orientaciones, algo habitual con una cámara cenital. En clips de video, el gesto de \emph{palma} se reconoce correctamente en el 82--87\% de los casos, con un 4,2\% de activaciones falsas.
+\textbf{Partidas reales.} Finalmente, se realizó una validación integral del prototipo mediante partidas completas de Blackjack grabadas en el escenario de la aplicación. Los casos evaluados incluyeron distintas situaciones del juego, entre ellas victorias del jugador y de la Casa, el ajuste dinámico del valor del As de 11 a 1 y la presencia de cartas giradas. Al reproducir posteriormente las partidas cuadro a cuadro, el sistema reprodujo correctamente los resultados finales, las cartas detectadas y los gestos registrados durante la ejecución en vivo (Fig.~\ref{fig:aplicacion}). Las partidas quedan como prueba de regresión del sistema, que opera a 7--10 cuadros por segundo en CPU.
 
 % =====================================================================================================================
 \section{Conclusiones}
-
-Los experimentos realizados permiten extraer conclusiones tanto sobre el desempeño del modelo de visión como sobre la robustez y el funcionamiento del sistema completo en condiciones reales:
 
 \begin{enumerate}
 \item El rendimiento en el dataset sintético (mAP50 0,995) no anticipa el rendimiento real (0,68--0,86): evaluar con
@@ -316,12 +288,10 @@ perturbación más dañina y la iluminación pesa mucho más que en los datos si
 \item Para gestos con cámara cenital, reglas invariantes a la rotación sobre los puntos de MediaPipe funcionan donde el
 clasificador preentrenado falla.
 \end{enumerate}
-\textbf{Trabajo futuro:}
-\begin{itemize}
-    \item\ Reconocer el palo (permitiría detectar cartas duplicadas, imposibles con un solo mazo),
-    \item\ Entrenar con la cámara en ambas orientaciones, más mesas e iluminaciones en el test propio.
-    \item\ Ampliar la detección y dinámica a varios jugadores.
-\end{itemize}
+\textbf{Trabajo futuro:} reconocer el palo (permitiría detectar cartas duplicadas, imposibles con un solo mazo),
+entrenar con la cámara en ambas orientaciones, sumar mesas e iluminaciones al test propio y ampliar el sistema a
+varios jugadores. El código, los modelos, los datos y las partidas reales están disponibles en
+\url{https://github.com/dichiazzar/VpC_2_TP_2}.
 
 
 \bibliographystyle{IEEEtran}

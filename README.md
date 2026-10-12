@@ -20,6 +20,11 @@ Blackjack el palo no importa, alcanza con distinguir **13 valores**:
 | **A: un solo paso** | Un detector encuentra cada esquina y clasifica su valor | YOLO11s con 13 clases (**YOLO-13**) |
 | **B: dos etapas** | Un detector solo localiza la esquina, se recorta y una CNN clasifica el valor | YOLO11s con 1 clase (**YOLO-1**) + ResNet-18 (**CNN-13**) |
 
+> **Nota sobre los nombres:** YOLO-13, YOLO-1 y CNN-13 son nombres internos del proyecto, no versiones de YOLO. El
+> número indica cuántas clases distingue cada modelo. Los dos detectores usan la misma arquitectura,
+> **YOLO11s** de Ultralytics: YOLO-13 detecta los 13 valores y YOLO-1 una sola clase (la esquina). CNN-13 es una
+> ResNet-18 que clasifica los 13 valores. Las carpetas `YOLO - 13/`, `YOLO - 1/` y `CNN - 13/` siguen esa convención.
+
 Sobre la salida de cualquiera de los dos pipelines trabajan tres módulos:
 
 - **Identificador:** une las dos esquinas de cada carta y reparte las cartas entre Casa y Jugador.

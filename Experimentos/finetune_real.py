@@ -239,7 +239,7 @@ def main():
     ap.add_argument("--modelo", default="todos", choices=["todos", "yolo13", "yolo1", "cnn"])
     ap.add_argument("--epochs", type=int, default=15)
     ap.add_argument("--patience", type=int, default=5)
-    ap.add_argument("--n-sintetico", type=int, default=600, help="imágenes sintéticas por época (YOLO)")
+    ap.add_argument("--n-sintetico", type=int, default=400, help="imágenes sintéticas por época (YOLO)")
     ap.add_argument("--n-sintetico-cnn", type=int, default=4000, help="recortes sintéticos por época (CNN)")
     ap.add_argument("--repetir-real", type=int, default=5, help="veces que se repite el train real por época")
     ap.add_argument("--batch-yolo", type=int, default=16)
