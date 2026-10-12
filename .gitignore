@@ -5,6 +5,8 @@ __pycache__/
 .venv/
 .DS_Store
 Thumbs.db
+# archivos temporales de Office (aparecen mientras un documento está abierto)
+~$*
 
 # ---------------------------------------------------------------- generados por ultralytics / entrenamiento
 *.cache

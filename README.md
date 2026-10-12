@@ -2,6 +2,13 @@
 
 **Visión por Computadora II · CEIA-FIUBA (2026)**: Cristhian Pettico, Rodolfo Di Chiazza, Julian Blanco
 
+| Entregable | Dónde |
+|---|---|
+| Paper (formato IEEE) | [Paper/Paper.pdf](Paper/Paper.pdf) (fuente LaTeX: `Paper/main.tex`) |
+| Presentación (PowerPoint) | [Presentacion/Blackjack con visión por computadora.pptx](Presentacion/Blackjack%20con%20visi%C3%B3n%20por%20computadora.pptx) |
+| Presentación (Google Slides) | [Ver en Google Slides](https://docs.google.com/presentation/d/1oox9oVj0Hx0O-9cKe5apmXOHyCtNjfk4HRuBcRZ2EVU/edit?usp=sharing) |
+| Video demo (83 s, sin audio) | [videos/demo.mp4](videos/demo.mp4) (se regenera con `python Experimentos/video_demo.py`) |
+
 Construimos un prototipo que permite **jugar al Blackjack de verdad** con una cámara cenital sobre la mesa:
 
 - **Cartas:** la cámara reconoce las cartas que se reparten y las asigna a la **Casa** (mitad superior de la imagen)
